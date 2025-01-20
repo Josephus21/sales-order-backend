@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transaction Logs</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f4f9;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 50px auto;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #444;
+        }
+
+        .filter-section {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .filter-section input,
+        .filter-section button {
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        table thead {
+            background: #4caf50;
+            color: white;
+        }
+
+        table th, table td {
+            text-align: left;
+            padding: 10px;
+            border: 1px solid #ccc;
+        }
+
+        table tbody tr:nth-child(odd) {
+            background: #f9f9f9;
+        }
+
+        .export-btn,
+        .clear-btn {
+            background: #4caf50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            margin-top: 20px;
+            width: 100%;
+            text-align: center;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        .export-btn:hover,
+        .clear-btn:hover {
+            background: #45a049;
+        }
+
+        .clear-btn {
+            background: #ef5350;
+        }
+
+        .clear-btn:hover {
+            background: #e53935;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Transaction Logs</h1>
+
+        <!-- Date filter section -->
+        <div class="filter-section">
+            <input type="date" id="filterDate" placeholder="Select date">
+            <button onclick="filterLogs()">Filter</button>
+        </div>
+
+        <!-- Log table -->
+        <table id="logTable">
+            <thead>
+                <tr>
+                    <th>Action</th>
+                    <th>Item Name</th>
+                    <th>Details</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Logs will be dynamically added here -->
+            </tbody>
+        </table>
+
+        <!-- Export Button -->
+        <button class="export-btn" onclick="exportToExcel()">Export to Excel</button>
+
+        <!-- Clear Logs Button -->
+        <button class="clear-btn" onclick="clearLogs()">Clear Logs</button>
+		 <button class="home-btn" onclick="window.location.href='index.html'">Go to Dashboard</button>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', loadLogs);
+
+        // Load logs from localStorage
+        function loadLogs() {
+            const logs = JSON.parse(localStorage.getItem('logs')) || [];
+            const tableBody = document.querySelector('#logTable tbody');
+            tableBody.innerHTML = ''; // Clear existing rows
+
+            logs.forEach(log => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${log.action}</td>
+                    <td>${log.itemName}</td>
+                    <td class="log-entry">${log.details}</td>
+                    <td>${log.date}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        // Filter logs based on selected date
+        function filterLogs() {
+            const filterDate = document.getElementById('filterDate').value;
+            const logs = JSON.parse(localStorage.getItem('logs')) || [];
+            const filteredLogs = filterDate
+                ? logs.filter(log => log.date.startsWith(filterDate))
+                : logs;
+
+            const tableBody = document.querySelector('#logTable tbody');
+            tableBody.innerHTML = ''; // Clear existing rows
+
+            filteredLogs.forEach(log => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${log.action}</td>
+                    <td>${log.itemName}</td>
+                    <td class="log-entry">${log.details}</td>
+                    <td>${log.date}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        // Export logs to Excel
+        function exportToExcel() {
+            const table = document.getElementById("logTable");
+            const rows = Array.from(table.rows);
+            let csvContent = "Action,Item Name,Details,Date\n";
+
+            rows.slice(1).forEach(row => {  // Skip the header row
+                const cols = row.querySelectorAll("td");
+                const rowData = Array.from(cols).map(col => col.innerText);
+                csvContent += rowData.join(",") + "\n";
+            });
+
+            // Create a download link for the CSV content
+            const downloadLink = document.createElement("a");
+            downloadLink.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csvContent);
+            downloadLink.target = "_blank";
+            downloadLink.download = "transaction_logs.csv";
+
+            // Trigger the download
+            downloadLink.click();
+        }
+
+        // Clear all logs from localStorage
+        function clearLogs() {
+            if (confirm('Are you sure you want to clear all logs?')) {
+                localStorage.removeItem('logs');
+                loadLogs(); // Reload the logs after clearing
+            }
+        }
+    </script>
+</body>
+</html>

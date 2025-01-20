@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Order</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f4f9;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 50px auto;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #444;
+        }
+
+        .orderer-name {
+            margin-bottom: 20px;
+        }
+
+        .orderer-name input {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            width: 100%;
+            margin-right: 10px;
+        }
+
+        .sales-order-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .sales-order-item select,
+        .sales-order-item input {
+            margin-right: 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            width: 45%;
+        }
+
+        .sales-order-item button {
+            background: #ff7043;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background 0.3s ease;
+        }
+
+        .sales-order-item button:hover {
+            background: #f4511e;
+        }
+
+        .delete-btn {
+            background: #ef5350;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+            padding: 5px 10px;
+            margin-left: 10px;
+        }
+
+        .delete-btn:hover {
+            background: #e53935;
+        }
+
+        table {
+            width: 100%;
+            margin-top: 20px;
+            border-collapse: collapse;
+        }
+
+        table th, table td {
+            padding: 10px;
+            border: 1px solid #ccc;
+            text-align: center;
+        }
+
+        table th {
+            background-color: #f4f4f9;
+        }
+
+        button:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+        }
+
+        .home-btn {
+            background: #66bb6a;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+
+        .home-btn:hover {
+            background: #43a047;
+        }
+
+        .filter-section {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .filter-section input {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        .filter-section button {
+            background: #42a5f5;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin-left: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .filter-section button:hover {
+            background: #1e88e5;
+        }
+
+        .export-btn {
+            background: #66bb6a;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+
+        .export-btn:hover {
+            background: #43a047;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Sales Order</h1>
+
+        <form id="salesOrderForm">
+            <div class="orderer-name">
+                <label for="ordererName">Orderer's Name:</label>
+                <input type="text" id="ordererName" name="ordererName" placeholder="Enter your name" required>
+            </div>
+
+            <div id="itemsList" class="multiple-items">
+                <!-- Multiple items will be added here -->
+            </div>
+
+            <!-- Add Item Button -->
+            <button type="button" id="addItemBtn">Add Item to Order</button>
+
+            <!-- Submit Order Button -->
+            <button type="submit" id="orderButton" disabled>Submit Sales Order</button>
+        </form>
+
+        <div class="filter-section">
+            <label for="filterDate">Filter by Date:</label>
+            <input type="date" id="filterDate">
+            <button onclick="filterSalesOrder()">Filter</button>
+        </div>
+
+        <h2>Sales Order Log</h2>
+        <table id="salesOrderTable">
+            <thead>
+                <tr>
+                    <th>Orderer Name</th>
+                    <th>Items Ordered</th>
+                    <th>Time and Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Sales orders will appear here -->
+            </tbody>
+        </table>
+
+        <!-- Export Button -->
+        <button class="export-btn" onclick="exportToExcel()">Export to Excel</button>
+
+        <!-- Home Button -->
+        <button class="home-btn" onclick="window.location.href='home.html'">Go to Home</button>
+    </div>
+
+    <script>
+        // Load available items from inventory
+        document.addEventListener('DOMContentLoaded', function() {
+            loadItems();
+            loadSalesOrderLog();
+        });
+
+        // Handle sales order form submission
+        document.getElementById('salesOrderForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const ordererName = document.getElementById('ordererName').value.trim();
+            if (!ordererName) {
+                alert("Please enter the orderer's name.");
+                return;
+            }
+
+            const itemsList = document.querySelectorAll('.sales-order-item');
+            const inventory = JSON.parse(localStorage.getItem('inventory')) || [];
+            let orderItems = [];
+            let isValid = true;
+
+            itemsList.forEach(itemRow => {
+                const selectedItem = itemRow.querySelector('.itemSelect').value;
+                const orderQty = parseInt(itemRow.querySelector('.orderQty').value.trim(), 10);
+
+                if (!selectedItem || orderQty <= 0) {
+                    alert('Please select an item and enter a valid order quantity.');
+                    isValid = false;
+                    return;
+                }
+
+                const itemIndex = inventory.findIndex(item => item.itemName === selectedItem);
+                const item = inventory[itemIndex];
+
+                // Check if sufficient stock is available
+                if (item.itemStock < orderQty) {
+                    alert(`Insufficient stock for ${selectedItem}.`);
+                    isValid = false;
+                    return;
+                }
+
+                // Add selected item to orderItems array
+                orderItems.push({ itemName: item.itemName, orderQty });
+
+                // Update item stock in inventory
+                item.itemStock -= orderQty;
+            });
+
+            if (isValid) {
+                // Log the sales order in a single row with the orderer's name
+                logSalesOrder(ordererName, orderItems);
+
+                // Update the inventory in localStorage
+                localStorage.setItem('inventory', JSON.stringify(inventory));
+
+                // Reset the form and disable the button
+                document.getElementById('salesOrderForm').reset();
+                document.getElementById('orderButton').disabled = true;
+            }
+        });
+
+        // Add event listener to 'Add Item to Order' button
+        document.getElementById('addItemBtn').addEventListener('click', function() {
+            console.log("Add Item Button clicked");  // Debugging
+            addItemRow();
+        });
+
+        // Add an item row for order
+        function addItemRow() {
+            const inventory = JSON.parse(localStorage.getItem('inventory')) || [];
+            const itemsListContainer = document.getElementById('itemsList');
+
+            if (inventory.length === 0) {
+                alert("No items available in inventory.");
+                return;
+            }
+
+            const itemRow = document.createElement('div');
+            itemRow.classList.add('sales-order-item');
+            itemRow.innerHTML = `
+                <select class="itemSelect" required>
+                    <option value="" disabled selected>Select an item</option>
+                    ${inventory.map(item => `<option value="${item.itemName}">${item.itemName}</option>`).join('')}
+                </select>
+                <input type="number" class="orderQty" placeholder="Enter quantity to order" required min="1">
+                <button type="button" class="delete-btn" onclick="deleteItemRow(this)">Delete</button>
+            `;
+            itemsListContainer.appendChild(itemRow);
+
+            // Enable the submit button when items are added
+            document.getElementById('orderButton').disabled = false;
+        }
+
+        // Delete an item row
+        function deleteItemRow(button) {
+            button.closest('.sales-order-item').remove();
+            // Disable the submit button if no items remain
+            if (document.querySelectorAll('.sales-order-item').length === 0) {
+                document.getElementById('orderButton').disabled = true;
+            }
+        }
+
+        // Log the sales order (combine all ordered items into one row)
+        function logSalesOrder(ordererName, orderItems) {
+            const salesOrderLog = JSON.parse(localStorage.getItem('salesOrderLog')) || [];
+            const currentTime = new Date();
+            const formattedTime = currentTime.toLocaleString();
+
+            const itemsOrdered = orderItems.map(item => `${item.itemName} (x${item.orderQty})`).join(', ');
+
+            const newOrder = {
+                ordererName,
+                itemsOrdered,
+                formattedTime
+            };
+
+            salesOrderLog.push(newOrder);
+            localStorage.setItem('salesOrderLog', JSON.stringify(salesOrderLog));
+
+            displaySalesOrderLog();
+        }
+
+        // Display all sales orders
+        function displaySalesOrderLog() {
+            const salesOrderLog = JSON.parse(localStorage.getItem('salesOrderLog')) || [];
+            const salesOrderTableBody = document.querySelector('#salesOrderTable tbody');
+            salesOrderTableBody.innerHTML = '';
+
+            salesOrderLog.forEach(order => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${order.ordererName}</td>
+                    <td>${order.itemsOrdered}</td>
+                    <td>${order.formattedTime}</td>
+                `;
+                salesOrderTableBody.appendChild(row);
+            });
+        }
+
+        // Load the sales order log on page load
+        function loadSalesOrderLog() {
+            const salesOrderLog = JSON.parse(localStorage.getItem('salesOrderLog')) || [];
+            if (salesOrderLog.length > 0) {
+                displaySalesOrderLog();
+            }
+        }
+
+        // Filter sales order log by date
+        function filterSalesOrder() {
+            const filterDate = document.getElementById('filterDate').value;
+            const salesOrderLog = JSON.parse(localStorage.getItem('salesOrderLog')) || [];
+
+            const filteredLog = salesOrderLog.filter(order => {
+                const orderDate = new Date(order.formattedTime).toISOString().split('T')[0];
+                return orderDate === filterDate;
+            });
+
+            displaySalesOrderLog(filteredLog);
+        }
+
+        // Export filtered log to Excel
+        function exportToExcel() {
+            const filterDate = document.getElementById('filterDate').value;
+            const salesOrderLog = JSON.parse(localStorage.getItem('salesOrderLog')) || [];
+
+            let logToExport = salesOrderLog;
+            if (filterDate) {
+                logToExport = salesOrderLog.filter(order => {
+                    const orderDate = new Date(order.formattedTime).toISOString().split('T')[0];
+                    return orderDate === filterDate;
+                });
+            }
+
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(logToExport);
+            XLSX.utils.book_append_sheet(wb, ws, 'Sales Order Log');
+            XLSX.writeFile(wb, 'Sales_Order_Log.xlsx');
+        }
+    </script>
+
+    <!-- Include the XLSX library for Excel export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+</body>
+</html>
